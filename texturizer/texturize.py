@@ -41,7 +41,7 @@ def load_images(input_img: str, output_img: str) -> Union[np.ndarray, np.ndarray
         numpy.ndarray: A copy of the second file loaded.
     """
     input_img = Image.open(input_img).convert("RGB")
-    output_img = Image.open(output_img).resize(input_img.size)
+    output_img = Image.open(output_img).resize(input_img.size).convert("RGB")
     return np.array(input_img).copy(), np.array(output_img).copy()
 
 
