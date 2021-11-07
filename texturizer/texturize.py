@@ -23,7 +23,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 """
 
-import math
 from typing import Union
 
 import numpy as np
@@ -38,15 +37,15 @@ def load_images(input_img: str, output_img: str) -> Union[np.ndarray, np.ndarray
         output_img (str): The other file to load.
 
     Returns:
-        np.ndarray: A copy of the first file loaded.
-        np.ndarray: A copy of the second file loaded.
+        numpy.ndarray: A copy of the first file loaded.
+        numpy.ndarray: A copy of the second file loaded.
     """
-    input_img = np.asarray(Image.open(input_img))
-    output_img = np.asarray(Image.open(output_img))
-    return input_img.copy(), output_img.copy()
+    input_img = Image.open(input_img).convert("RGB")
+    output_img = Image.open(output_img).resize(input_img.size)
+    return np.array(input_img).copy(), np.array(output_img).copy()
 
 
-def calculate_3d_euclidian_distance(hue: list, target_hue: list) -> int:
+def calculate_3d_euclidian_distance(hue: list, target_hue: list) -> Union[float, np.ndarray]:
     """Calculate the 3d euclidian distance from two diffrent colors.
     Requires an iterable with at least 3 items.
 
@@ -55,19 +54,18 @@ def calculate_3d_euclidian_distance(hue: list, target_hue: list) -> int:
         target_hue (list): The other hue in which to compare.
 
     Returns:
-        int: The euclidian distance between the two hues.
+        numpy.ndarray: A numpy array of euclidian distances.
     """
-    x = math.pow(hue[0] - target_hue[0], 2)
-    y = math.pow(hue[1] - target_hue[1], 2)
-    z = math.pow(hue[2] - target_hue[2], 2)
-    return math.sqrt(x + y + z)
+    squared = np.square(hue[:, np.newaxis, :] - target_hue)
+    euclidian_sum = np.sum(squared, axis=1)
+    return np.sqrt(euclidian_sum)
 
 
 def texturize(
     source: str,
     overlay: str,
     hue: np.ndarray = np.array([255, 255, 255]),
-    threshold: int = 10,
+    threshold: int = 30,
 ) -> Image:
     """Texturizes a given image from another image.
     This works by replacing the pixel which does not meet the threshold given with the pixel from the overlay.
@@ -77,19 +75,16 @@ def texturize(
         overlay (str): The overlay in which to texturize the source with.
         hue (np.ndarray): The target hue in which to replace the pixel if not within a certain threshold of that hue.
         threshold (int): The threshold required in order to replace the pixel.
-        
+
     Returns:
         Image: The texturized image.
     """
     source, overlay = load_images(source, overlay)
-    np.resize(overlay, source.shape)
-    for x in range(source.shape[0]):
-        for y in range(source.shape[1]):
-            euclidian_distance = calculate_3d_euclidian_distance(source[x, y], hue)
-            if euclidian_distance > threshold:
-                source[x, y][:3] = overlay[x, y][:3]
+    pixels = calculate_3d_euclidian_distance(source, hue) < threshold
+    source[pixels] = overlay[pixels]
     return Image.fromarray(source)
 
 
 if __name__ == "__main__":
-    texturize("./assets/cikn.png", "./assets/orange.jpg")
+    image = texturize("./assets/tweakie.png", "./assets/orange.jpg")
+    image.save("./assets/output.png")
