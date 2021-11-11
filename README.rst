@@ -6,6 +6,8 @@ It texturizes an image given a image and a texture to texturize it with.
 
 There is not much to it, and I don't plan to expand it.
 
+Sample output can be found in the texturizer/assets/out folder.
+
 Usage
 --------------------
 All the code is in the texturize.py file.
