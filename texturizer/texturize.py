@@ -28,6 +28,24 @@ from typing import Union
 import numpy as np
 from PIL import Image
 
+from comparisons import calculate_deltaE_similarity
+
+
+def get_primary_color(source: str) -> list:
+    """Given an image, get the dominant color of that image.
+    Resizes the image to one pixel and gets the color of that pixel.
+
+    Args:
+        source (str): The image to get the primary color of.
+
+    Returns:
+        list: The RGB of that pixel.
+    """
+    img = Image.fromarray(source.copy()).convert("RGB")
+    img.resize((1, 1), resample=0)
+    primary_color = img.getpixel((0, 0))
+    return primary_color
+
 
 def load_images(input_img: str, output_img: str) -> Union[np.ndarray, np.ndarray]:
     """Loads and converts the image to a numpy array.
@@ -45,27 +63,11 @@ def load_images(input_img: str, output_img: str) -> Union[np.ndarray, np.ndarray
     return np.array(input_img).copy(), np.array(output_img).copy()
 
 
-def calculate_3d_euclidian_distance(hue: list, target_hue: list) -> Union[float, np.ndarray]:
-    """Calculate the 3d euclidian distance from two diffrent colors.
-    Requires an iterable with at least 3 items.
-
-    Args:
-        hue (list): The hue in which to compare.
-        target_hue (list): The other hue in which to compare.
-
-    Returns:
-        numpy.ndarray: A numpy array of euclidian distances.
-    """
-    squared = np.square(hue[:, np.newaxis, :] - target_hue)
-    euclidian_sum = np.sum(squared, axis=1)
-    return np.sqrt(euclidian_sum)
-
-
 def texturize(
     source: str,
     overlay: str,
-    hue: np.ndarray = np.array([255, 255, 255]),
-    threshold: int = 30,
+    hue: list = None,
+    threshold: int = 10,
 ) -> Image:
     """Texturizes a given image from another image.
     This works by replacing the pixel which does not meet the threshold given with the pixel from the overlay.
@@ -73,18 +75,25 @@ def texturize(
     Args:
         source (str): The given input image in which to texturize.
         overlay (str): The overlay in which to texturize the source with.
-        hue (np.ndarray): The target hue in which to replace the pixel if not within a certain threshold of that hue.
+        hue (list): The target hue in which to replace the pixel if not within a certain threshold of that hue.
         threshold (int): The threshold required in order to replace the pixel.
 
     Returns:
         Image: The texturized image.
     """
     source, overlay = load_images(source, overlay)
-    pixels = calculate_3d_euclidian_distance(source, hue) < threshold
+    if hue is None:
+        hue = get_primary_color(source)
+    pixels = calculate_deltaE_similarity(source, hue) < threshold
     source[pixels] = overlay[pixels]
     return Image.fromarray(source)
 
 
 if __name__ == "__main__":
-    image = texturize("./assets/tweakie.png", "./assets/orange.jpg")
-    image.save("./assets/output.png")
+    image = texturize(
+        "./assets/tweakie.png",
+        "./assets/textures/diamond.jpg",
+        hue=[5, 182, 215],
+        threshold=30,
+    )
+    image.save("./assets/out/tweak_diamond.png")
